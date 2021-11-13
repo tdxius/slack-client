@@ -100,36 +100,49 @@ export default {
       title: 'Vuetify.js',
     }
   },
-  async mounted () {
-    const socket = io('http://localhost:3001/');
-    socket.on('namespaces', namespaces => {
-      this.$store.commit('namespaces/update', namespaces)
-    })
-  },
-  computed: {
-    namespace () {
-      return this.$store.state.namespace
-    }
+  created () {
+    this.connectToGlobalNamespace();
   },
   methods: {
     isNamespaceActive (namespace) {
       return this.$store.state.namespace && this.$store.state.namespace.endpoint === namespace.endpoint
     },
     onNamespaceClicked (namespace) {
+      this.connectToNamespace(namespace)
+    },
+    connectToGlobalNamespace () {
+      const socket = io('http://localhost:3001/');
+      // this.$store.commit('setGlobalSocket', socket)
+
+      // TODO: rename event to load:namespaces
+      socket.on('namespaces', namespaces => {
+        this.$store.commit('namespaces/update', namespaces)
+
+        const namespace = this.$store.getters['namespaces/find'](this.$route.params.namespace);
+        if (!namespace) {
+          return
+        }
+
+        this.connectToNamespace(namespace, this.$route.params.room)
+      })
+    },
+    connectToNamespace (namespace, room = null) {
       const socket = io(`http://localhost:3001${namespace.endpoint}`)
       this.$store.commit('setNamespace', namespace)
+      this.$store.commit('setNamespaceSocket', socket)
+
       socket.on('rooms', rooms => {
-        rooms = rooms.map(room => {
+        this.$store.commit('rooms/update', rooms.map(room => {
+          // TODO: make this server-side
           return {
             ...room,
             to: `${namespace.endpoint}/${room.slug}`,
           }
-        })
-        this.$store.commit('rooms/update', rooms)
+        }))
 
-        this.$router.push(`${namespace.endpoint}/${rooms[0].slug}`)
+        this.$router.push(`${namespace.endpoint}/${room ?? rooms[0].slug}`)
       })
-    }
+    },
   },
 }
 </script>
