@@ -1,35 +1,63 @@
 <template>
-  <v-app dark>
+  <v-app>
     <v-navigation-drawer
       v-model="drawer"
-      :mini-variant="miniVariant"
-      :clipped="clipped"
+      :clipped="true"
+      permanent
       fixed
       app
     >
-      <v-list>
+      <v-list subheader>
+        <v-subheader>
+          Namespaces
+        </v-subheader>
+
         <v-list-item
-          v-for="(item, i) in items"
+          v-for="(namespace, i) in $store.state.namespaces.list"
           :key="i"
-          :to="item.to"
+          @click.stop="onNamespaceClicked(namespace)"
+          :class="isNamespaceActive(namespace) ? 'v-list-item--active' : null"
+          exact
+        >
+          <v-list-item-action>
+            <v-icon>{{ namespace.icon }}</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title v-text="namespace.title"/>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+
+      <v-divider></v-divider>
+
+      <v-list subheader>
+        <v-subheader>
+          Rooms
+        </v-subheader>
+
+        <v-list-item
+          v-for="(room, i) in $store.state.rooms.list"
+          :key="i"
+          :to="room.to"
           router
           exact
         >
           <v-list-item-action>
-            <v-icon>{{ item.icon }}</v-icon>
+            <v-icon>{{ room.icon }}</v-icon>
           </v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title v-text="item.title" />
+            <v-list-item-title v-text="room.title"/>
           </v-list-item-content>
         </v-list-item>
       </v-list>
+
     </v-navigation-drawer>
     <v-app-bar
-      :clipped-left="clipped"
+      :clipped-left="true"
       fixed
       app
     >
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer"/>
       <v-btn
         icon
         @click.stop="miniVariant = !miniVariant"
@@ -38,47 +66,18 @@
       </v-btn>
       <v-btn
         icon
-        @click.stop="clipped = !clipped"
-      >
-        <v-icon>mdi-application</v-icon>
-      </v-btn>
-      <v-btn
-        icon
         @click.stop="fixed = !fixed"
       >
         <v-icon>mdi-minus</v-icon>
       </v-btn>
-      <v-toolbar-title v-text="title" />
-      <v-spacer />
-      <v-btn
-        icon
-        @click.stop="rightDrawer = !rightDrawer"
-      >
-        <v-icon>mdi-menu</v-icon>
-      </v-btn>
+      <v-toolbar-title v-text="title"/>
+      <v-spacer/>
     </v-app-bar>
     <v-main>
       <v-container>
-        <Nuxt />
+        <Nuxt/>
       </v-container>
     </v-main>
-    <v-navigation-drawer
-      v-model="rightDrawer"
-      :right="right"
-      temporary
-      fixed
-    >
-      <v-list>
-        <v-list-item @click.native="right = !right">
-          <v-list-item-action>
-            <v-icon light>
-              mdi-repeat
-            </v-icon>
-          </v-list-item-action>
-          <v-list-item-title>Switch drawer (click me)</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
     <v-footer
       :absolute="!fixed"
       app
@@ -89,29 +88,48 @@
 </template>
 
 <script>
+import { io } from "socket.io-client";
+
 export default {
   data () {
     return {
-      clipped: false,
-      drawer: false,
+      drawer: true,
       fixed: false,
-      items: [
-        {
-          icon: 'mdi-apps',
-          title: 'Welcome',
-          to: '/'
-        },
-        {
-          icon: 'mdi-chart-bubble',
-          title: 'Inspire',
-          to: '/inspire'
-        }
-      ],
       miniVariant: false,
       right: true,
-      rightDrawer: false,
-      title: 'Vuetify.js'
+      title: 'Vuetify.js',
     }
-  }
+  },
+  async mounted () {
+    const socket = io('http://localhost:3001/');
+    socket.on('namespaces', namespaces => {
+      this.$store.commit('namespaces/update', namespaces)
+    })
+  },
+  computed: {
+    namespace () {
+      return this.$store.state.namespace
+    }
+  },
+  methods: {
+    isNamespaceActive (namespace) {
+      return this.$store.state.namespace && this.$store.state.namespace.endpoint === namespace.endpoint
+    },
+    onNamespaceClicked (namespace) {
+      const socket = io(`http://localhost:3001${namespace.endpoint}`)
+      this.$store.commit('setNamespace', namespace)
+      socket.on('rooms', rooms => {
+        rooms = rooms.map(room => {
+          return {
+            ...room,
+            to: `${namespace.endpoint}/${room.slug}`,
+          }
+        })
+        this.$store.commit('rooms/update', rooms)
+
+        this.$router.push(`${namespace.endpoint}/${rooms[0].slug}`)
+      })
+    }
+  },
 }
 </script>
