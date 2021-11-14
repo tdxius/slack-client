@@ -45,7 +45,7 @@ export default {
   methods: {},
   mounted () {
     this.room = this.$store.getters['rooms/find'](this.$route.params.room)
-    console.log(this.$store.state.sockets)
+    console.log(this.$store.state)
   }
 }
 </script>

@@ -100,47 +100,66 @@ export default {
       title: 'Vuetify.js',
     }
   },
-  created () {
-    this.connectToGlobalNamespace();
+  async created () {
+    await this.connectToGlobalNamespace();
+
+    const namespace = this.findActiveNamespace()
+    if (!namespace) {
+      return
+    }
+
+    await this.connectToNamespace(namespace)
+
+    const room = this.findActiveRoom()
+    if (!room) {
+      return
+    }
+
+    await this.$router.push(`${namespace.endpoint}/${room.slug}`)
   },
   methods: {
+    findActiveNamespace () {
+      return this.$store.getters['namespaces/find'](this.$route.params.namespace)
+    },
+    findActiveRoom () {
+      return this.$store.getters['rooms/find'](this.$route.params.room)
+    },
     isNamespaceActive (namespace) {
       return this.$store.state.namespace && this.$store.state.namespace.endpoint === namespace.endpoint
     },
-    onNamespaceClicked (namespace) {
-      this.connectToNamespace(namespace)
+    async onNamespaceClicked (namespace) {
+      await this.connectToNamespace(namespace)
+
+      const rooms = this.$store.state.rooms.list
+      await this.$router.push(`${namespace.endpoint}/${rooms[0].slug}`)
     },
     connectToGlobalNamespace () {
       const socket = io('http://localhost:3001/');
-      // this.$store.commit('setGlobalSocket', socket)
 
-      // TODO: rename event to load:namespaces
-      socket.on('namespaces', namespaces => {
-        this.$store.commit('namespaces/update', namespaces)
+      return new Promise(resolve => {
+        socket.on('load:namespaces', async namespaces => {
+          this.$store.commit('namespaces/update', namespaces)
 
-        const namespace = this.$store.getters['namespaces/find'](this.$route.params.namespace);
-        if (!namespace) {
-          return
-        }
-
-        this.connectToNamespace(namespace, this.$route.params.room)
+          resolve();
+        })
       })
     },
-    connectToNamespace (namespace, room = null) {
+    async connectToNamespace (namespace) {
       const socket = io(`http://localhost:3001${namespace.endpoint}`)
       this.$store.commit('setNamespace', namespace)
-      this.$store.commit('setNamespaceSocket', socket)
 
-      socket.on('rooms', rooms => {
-        this.$store.commit('rooms/update', rooms.map(room => {
-          // TODO: make this server-side
-          return {
-            ...room,
-            to: `${namespace.endpoint}/${room.slug}`,
-          }
-        }))
+      return new Promise((resolve) => {
+        socket.on('load:rooms', rooms => {
+          this.$store.commit('rooms/update', rooms.map(room => {
+            // TODO: make this server-side
+            return {
+              ...room,
+              to: `${namespace.endpoint}/${room.slug}`,
+            }
+          }))
 
-        this.$router.push(`${namespace.endpoint}/${room ?? rooms[0].slug}`)
+          resolve();
+        })
       })
     },
   },
