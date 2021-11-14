@@ -22,7 +22,6 @@
               </strong>
             </v-col>
             <v-col>
-              <strong>New Icon</strong>
               <div class="text-caption">
                 {{ message.content }}
               </div>

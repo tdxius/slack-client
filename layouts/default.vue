@@ -91,6 +91,7 @@
 import { io } from "socket.io-client";
 
 export default {
+  middleware: 'authenticated',
   data () {
     return {
       drawer: true,
@@ -103,10 +104,10 @@ export default {
       namespaceSocket: null,
     }
   },
-  async created () {
+  async mounted () {
     this.$nuxt.$on('message:send', (message) => {
-      this.namespaceSocket.emit('message', message)
-      console.log('message:send', message)
+      this.namespaceSocket.emit('message', { message, user: this.$store.state.user })
+      console.log('message:send', { message, user: this.$store.state.user })
     })
 
     this.$nuxt.$on('room:join', (room) => {
@@ -118,6 +119,7 @@ export default {
 
     const namespace = this.findActiveNamespace()
     if (!namespace) {
+      this.hasLoaded = true
       return
     }
 
