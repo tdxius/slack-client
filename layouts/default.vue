@@ -75,7 +75,7 @@
     </v-app-bar>
     <v-main>
       <v-container>
-        <Nuxt/>
+        <Nuxt v-if="hasLoaded"/>
       </v-container>
     </v-main>
     <v-footer
@@ -98,9 +98,22 @@ export default {
       miniVariant: false,
       right: true,
       title: 'Vuetify.js',
+      hasLoaded: false,
+      globalSocket: null,
+      namespaceSocket: null,
     }
   },
   async created () {
+    this.$nuxt.$on('message:send', (message) => {
+      this.namespaceSocket.emit('message', message)
+      console.log('message:send', message)
+    })
+
+    this.$nuxt.$on('room:join', (room) => {
+      this.namespaceSocket.emit('room:join', room)
+      console.log('room:join', room)
+    })
+
     await this.connectToGlobalNamespace();
 
     const namespace = this.findActiveNamespace()
@@ -110,12 +123,7 @@ export default {
 
     await this.connectToNamespace(namespace)
 
-    const room = this.findActiveRoom()
-    if (!room) {
-      return
-    }
-
-    await this.$router.push(`${namespace.endpoint}/${room.slug}`)
+    this.hasLoaded = true;
   },
   methods: {
     findActiveNamespace () {
@@ -134,10 +142,10 @@ export default {
       await this.$router.push(`${namespace.endpoint}/${rooms[0].slug}`)
     },
     connectToGlobalNamespace () {
-      const socket = io('http://localhost:3001/');
+      this.globalSocket = io('http://localhost:3001/');
 
       return new Promise(resolve => {
-        socket.on('load:namespaces', async namespaces => {
+        this.globalSocket.on('load:namespaces', async namespaces => {
           this.$store.commit('namespaces/update', namespaces)
 
           resolve();
@@ -145,11 +153,19 @@ export default {
       })
     },
     async connectToNamespace (namespace) {
-      const socket = io(`http://localhost:3001${namespace.endpoint}`)
+      this.namespaceSocket = io(`http://localhost:3001${namespace.endpoint}`)
       this.$store.commit('setNamespace', namespace)
 
       return new Promise((resolve) => {
-        socket.on('load:rooms', rooms => {
+        this.namespaceSocket.on('load:messages', messages => {
+          const room = this.findActiveRoom()
+          this.$store.commit('rooms/updateMessages', {
+            roomSlug: room.slug,
+            messages,
+          })
+          console.log('load:messages', messages)
+        })
+        this.namespaceSocket.on('load:rooms', rooms => {
           this.$store.commit('rooms/update', rooms.map(room => {
             // TODO: make this server-side
             return {

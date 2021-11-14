@@ -31,6 +31,14 @@
         </v-timeline-item>
 
       </v-timeline>
+
+      <v-form class="d-flex" @submit.prevent="onMessageSubmit">
+        <v-text-field
+          label="Message"
+          v-model="message"
+        ></v-text-field>
+        <v-btn>Send</v-btn>
+      </v-form>
     </v-col>
   </v-row>
 </template>
@@ -40,12 +48,18 @@ export default {
   data () {
     return {
       room: null,
+      message: null,
     }
   },
-  methods: {},
   mounted () {
     this.room = this.$store.getters['rooms/find'](this.$route.params.room)
-    console.log(this.$store.state)
-  }
+    this.$nuxt.$emit('room:join', this.room)
+  },
+  methods: {
+    onMessageSubmit () {
+      this.$nuxt.$emit('message:send', this.message)
+      this.message = null
+    }
+  },
 }
 </script>

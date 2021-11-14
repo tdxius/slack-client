@@ -6,6 +6,15 @@ export const mutations = {
   update(state, rooms) {
     state.list = rooms
   },
+  updateMessages(state, {roomSlug, messages}) {
+    const room = getters.find(state)(roomSlug)
+    if (!room) {
+      return
+    }
+
+    console.log("updateMessages", room, messages)
+    room.messages = messages
+  }
 }
 
 export const getters = {
