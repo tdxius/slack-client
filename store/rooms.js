@@ -12,7 +12,6 @@ export const mutations = {
       return
     }
 
-    console.log("updateMessages", room, messages)
     room.messages = messages
   }
 }

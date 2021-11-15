@@ -19,9 +19,9 @@
           :class="isNamespaceActive(namespace) ? 'v-list-item--active' : null"
           exact
         >
-          <v-list-item-action>
-            <v-icon>{{ namespace.icon }}</v-icon>
-          </v-list-item-action>
+          <v-list-item-avatar>
+            <v-img :src="namespace.icon"></v-img>
+          </v-list-item-avatar>
           <v-list-item-content>
             <v-list-item-title v-text="namespace.title"/>
           </v-list-item-content>
@@ -42,9 +42,9 @@
           router
           exact
         >
-          <v-list-item-action>
-            <v-icon>{{ room.icon }}</v-icon>
-          </v-list-item-action>
+          <v-list-item-avatar>
+            <v-img :src="room.icon"></v-img>
+          </v-list-item-avatar>
           <v-list-item-content>
             <v-list-item-title v-text="room.title"/>
           </v-list-item-content>
@@ -107,12 +107,10 @@ export default {
   async mounted () {
     this.$nuxt.$on('message:send', (message) => {
       this.namespaceSocket.emit('message', { message, user: this.$store.state.user })
-      console.log('message:send', { message, user: this.$store.state.user })
     })
 
     this.$nuxt.$on('room:join', (room) => {
       this.namespaceSocket.emit('room:join', room)
-      console.log('room:join', room)
     })
 
     await this.connectToGlobalNamespace();
@@ -165,7 +163,6 @@ export default {
             roomSlug: room.slug,
             messages,
           })
-          console.log('load:messages', messages)
         })
         this.namespaceSocket.on('load:rooms', rooms => {
           this.$store.commit('rooms/update', rooms.map(room => {
